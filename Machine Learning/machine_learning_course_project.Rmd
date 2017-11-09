@@ -1,0 +1,108 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "Vinicius Pereira"
+date: "November 07, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data from this project were generously provided by http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har
+
+## Model
+The objective of this project is to predict the result of the variable *classe* in the testing set based on the data in the training set. 
+According with the [Human Activity Recognition](http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har) study, the variable *classe* has five levels:
+
+* A (Performed exercise according to the specification)
+* B (Throwing the elbows to the front)
+* C (Lifting the dumbbell only halfway)
+* D (Lowering the dumbbell only halfway)
+* E (Throwing the hips to the front)
+
+In this project, The Decision Trees and Random Forests models will be applied and most accurate will chosen to predict the *classe* in the testing set.
+
+
+## Code
+### Loading libraries
+```{r echo = TRUE, message=FALSE,warning=FALSE}
+library(knitr)
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+library(e1071)
+```
+### Getting and cleaning data
+```{r echo = TRUE}
+#Getting data
+set.seed(4456)
+trainingSet <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"), na.strings=c("NA","#DIV/0!",""))
+testingSet <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"), na.strings=c("NA","#DIV/0!",""))
+
+#Cleaning data
+trainingSet<-trainingSet[,colSums(is.na(trainingSet)) == 0]
+testingSet <-testingSet[,colSums(is.na(testingSet)) == 0]
+
+#remove unused variables
+trainingSet   <-trainingSet[,-c(1:7)]
+testingSet <-testingSet[,-c(1:7)]
+```
+### Cross-validation
+Subseting the training set in one chunk of 70% and other of 30%
+```{r echo = TRUE}
+inTrain <- createDataPartition(trainingSet$classe, p=0.7, list=FALSE)
+subsetTraining <- trainingSet[inTrain,]
+subsetTesting  <- trainingSet[-inTrain,]
+dim(subsetTraining); dim(subsetTesting)
+```
+##Exploratory Analysis
+```{r echo = TRUE}
+barplot(prop.table(table(subsetTraining$classe)), main="Classe distribution on subset training", col=c("red","darkblue","darkgreen","orange","yellow"))
+```
+
+## Random Forest model
+
+```{r echo = TRUE}
+modelRF <- randomForest(classe ~. , data=subsetTraining, method="class")
+predictionRF <- predict(modelRF, subsetTesting, type = "class")
+confusionMatrix(predictionRF, subsetTesting$classe)
+```
+
+Random Forest model accuracy is 99.52%
+
+## Decision Tree model
+```{r echo = TRUE}
+modelDT <- rpart(classe ~. , data=subsetTraining, method="class")
+rpart.plot(modelDT, main="Decision Tree", extra=2, under=TRUE, faclen=0)
+
+predictionDT <- predict(modelDT, subsetTesting, type = "class")
+confusionMatrix(predictionDT, subsetTesting$classe)
+```
+
+Decision Tree model accuracy is 73.47%
+
+## Prediction on Test Data
+Due the high accuracy of 99.52%, the Random forests model will be applied on the testing set.
+```{r echo = TRUE}
+predict(modelRF,testingSet,type = "class")
+
+```
+ 
+
+
